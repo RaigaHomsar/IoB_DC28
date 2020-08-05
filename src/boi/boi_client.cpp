@@ -42,22 +42,50 @@ void send_post_to_battery_internet(const char *message, unsigned int length){
     config.cert_pem = CAcert;
     config.method = HTTP_METHOD_POST;
 
-    String data; 
-    data = "[{'data'='"; 
-    data += (char *)message; 
+    //this method to be called by itero .... wifi.localip pass in or is there a global avail?
+    //POST to batteryinter.net/connect w/ header of IoB - registration
+
+    String data; //this object has {"data":"message"} , change to be structure website wants
+        //$post= @{'macAddrBat'='192.168.0.32';'publicIP'='255.255.255.24';'data'='JBFburninatingAllTheGromflomites42'}
+
+    const char *placeholder = "someAddr";
+    data = "[{'macAddrBat'='";
+//    IPAddress ip_address = WiFi.localIP();
+//    String address_string = String(ip_address[0]) + String(".") +  String(ip_address[1]) + String(".") +  String(ip_address[2]) + String(".") +  String(ip_address[3]);
+    data += (char *)placeholder;
+    data += "'";
+
+    data = "{'publicIP'='";
+    data += (char *)placeholder;
+    data += "'";
+
+    data += "{'data'='";
+    data += (char *)message;
     data += "'}]";
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_http_client_set_post_field(client, data.c_str(),(int) data.length());
 
-    esp_err_t err = esp_http_client_perform(client);
+    String header_key = "IoBkey";
+    String header_value = "IoBvalue";
+    esp_err_t err_header = esp_http_client_set_header(client, header_key.c_str(), header_value.c_str()); //not handling return: ESP_FAIL/ESP_OK
+    if(err_header == ESP_FAIL){
+        Serial.println("boi_client.cpp header Error msg: " + err_header);
+    }
 
-    Serial.println(err);
-    if (err == ESP_OK) {
+    esp_err_t err = esp_http_client_perform(client);
+    if(err == ESP_FAIL){
+        Serial.println("boi_client.cpp esp_http_client_perform error: " + err);
+    }
+
+    if (err == ESP_OK) { //does header failure mean client is in a bad state and cannot post?
         ESP_LOGI(TAG, "Status = %d, content_length = %d",
                 esp_http_client_get_status_code(client),
                 esp_http_client_get_content_length(client));
     }
-    esp_http_client_cleanup(client);
+    
+    // get back the content here, do we want to pass this back to something calling into here or pass back on some medium
+        //something else is listening to?
 
+    esp_http_client_cleanup(client);
 }
